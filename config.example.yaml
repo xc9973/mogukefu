@@ -1,0 +1,52 @@
+# Telegram Intent Bot 配置示例
+# 复制此文件为 config.yaml 并填入实际配置
+
+bot:
+  # Telegram Bot Token (从 @BotFather 获取)
+  token: "YOUR_BOT_TOKEN"
+  # 关键词回复开关
+  keyword_reply_enabled: true
+  # AI 回复开关
+  ai_reply_enabled: true
+
+llm:
+  # OpenAI 格式 API 地址
+  base_url: "https://api.openai.com/v1"
+  # API 密钥
+  api_key: "YOUR_API_KEY"
+  # 模型名称
+  model: "gpt-3.5-turbo"
+
+# 意图配置
+intents:
+  - tag: "TUTORIAL"
+    description: "用户询问教程、说明书、如何使用、第一步做什么"
+    reply: |
+      📖 新手指南：
+      1. 点击置顶消息查看教程
+      2. 访问官网获取详细文档
+
+  - tag: "ISSUE"
+    description: "用户反馈报错、Bug、无法运行、卡住"
+    reply: |
+      🛠 故障排查：
+      请尝试重启应用，如果无效请截图发送给我们
+
+  - tag: "SERVICE"
+    description: "用户寻找人工客服、群主、投诉"
+    reply: |
+      👤 客服在线时间：9:00-18:00
+      请联系 @Admin
+
+  - tag: "IGNORE"
+    description: "闲聊、表情包、无关内容、负面情绪发泄"
+    reply: ""
+
+# 关键词配置
+keywords:
+  - keyword: "教程"
+    reply: "📖 新手指南：请查看置顶消息"
+  - keyword: "客服"
+    reply: "👤 请联系 @Admin"
+  - keyword: "bug"
+    reply: "🛠 请描述问题并截图"
