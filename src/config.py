@@ -63,9 +63,17 @@ class KeywordConfig:
     reply: str
 
 
+@dataclass
+class FAQConfig:
+    """FAQ 配置"""
+
+    faq_id: str
+    question: str
+    answer: str
+
 
 # 有效的意图标签
-VALID_INTENT_TAGS = {"TUTORIAL", "ISSUE", "SERVICE", "IGNORE"}
+VALID_INTENT_TAGS = {"TUTORIAL", "ISSUE", "SERVICE", "IGNORE", "FAQ"}
 
 
 @dataclass
@@ -79,8 +87,10 @@ class ConfigStore:
     _llm_config: LLMConfig | None = field(default=None, repr=False)
     _intents: list[IntentConfig] = field(default_factory=list, repr=False)
     _keywords: list[KeywordConfig] = field(default_factory=list, repr=False)
+    _faqs: list[FAQConfig] = field(default_factory=list, repr=False)
     _intent_reply_map: dict[str, str] = field(default_factory=dict, repr=False)
     _keyword_reply_map: dict[str, str] = field(default_factory=dict, repr=False)
+    _faq_reply_map: dict[str, str] = field(default_factory=dict, repr=False)
 
     def load(self, path: str | Path) -> None:
         """从 YAML 文件加载配置
@@ -109,6 +119,7 @@ class ConfigStore:
         self._parse_llm_config(data)
         self._parse_intents(data)
         self._parse_keywords(data)
+        self._parse_faqs(data)
         self._validate_intents()
 
     def _parse_bot_config(self, data: dict[str, Any]) -> None:
@@ -231,6 +242,35 @@ class ConfigStore:
             self._keywords.append(kw_config)
             self._keyword_reply_map[keyword] = reply
 
+    def _parse_faqs(self, data: dict[str, Any]) -> None:
+        """解析 FAQ 配置"""
+        faqs_data = data.get("faq", [])
+        if not isinstance(faqs_data, list):
+            raise ConfigError("faq 配置节必须是列表")
+
+        self._faqs = []
+        self._faq_reply_map = {}
+
+        for i, faq_data in enumerate(faqs_data):
+            if not isinstance(faq_data, dict):
+                raise ConfigError(f"faq[{i}] 必须是字典")
+
+            faq_id = faq_data.get("faq_id")
+            if not faq_id or not isinstance(faq_id, str):
+                raise ConfigError(f"faq[{i}].faq_id 必须是非空字符串")
+
+            question = faq_data.get("question", "")
+            if not isinstance(question, str):
+                raise ConfigError(f"faq[{i}].question 必须是字符串")
+
+            answer = faq_data.get("answer", "")
+            if not isinstance(answer, str):
+                raise ConfigError(f"faq[{i}].answer 必须是字符串")
+
+            faq_config = FAQConfig(faq_id=faq_id, question=question, answer=answer)
+            self._faqs.append(faq_config)
+            self._faq_reply_map[faq_id] = answer
+
     def _validate_intents(self) -> None:
         """验证意图配置完整性"""
         # 检查非 IGNORE 意图是否都有回复内容
@@ -258,6 +298,10 @@ class ConfigStore:
         """获取所有关键词配置"""
         return self._keywords.copy()
 
+    def get_faqs(self) -> list[FAQConfig]:
+        """获取所有 FAQ 配置"""
+        return self._faqs.copy()
+
     def get_reply_by_intent(self, tag: str) -> str | None:
         """根据意图标签获取回复内容
 
@@ -279,3 +323,14 @@ class ConfigStore:
             回复内容，如果关键词不存在返回 None
         """
         return self._keyword_reply_map.get(keyword)
+
+    def get_reply_by_faq_id(self, faq_id: str) -> str | None:
+        """根据 FAQ ID 获取回复内容
+
+        Args:
+            faq_id: FAQ 唯一标识
+
+        Returns:
+            回复内容，如果 FAQ ID 不存在返回 None
+        """
+        return self._faq_reply_map.get(faq_id)

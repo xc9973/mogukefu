@@ -105,6 +105,34 @@
 - [ ] 11. Final Checkpoint - 完整验证
   - 确保所有测试通过，如有问题请告知
 
+- [x] 12. 实现 FAQ 知识库功能
+  - [x] 12.1 扩展 ConfigStore 支持 FAQ
+    - 添加 FAQConfig 数据类
+    - 实现 get_faqs() 和 get_reply_by_faq_id() 方法
+    - 更新 YAML 配置加载逻辑
+    - _Requirements: 10.1, 4.5_
+  - [x] 12.2 更新 LLMClient 支持 FAQ 匹配
+    - 修改 ClassifyResult 添加 faq_id 字段
+    - 更新 System Prompt 包含 FAQ 列表
+    - 更新 JSON 解析逻辑
+    - _Requirements: 10.5, 10.7_
+  - [x] 12.3 更新 ReplyManager 支持 FAQ 回复
+    - 实现 FAQ 意图的回复获取逻辑
+    - 实现无效 faq_id 的回退处理
+    - _Requirements: 10.3, 10.4_
+  - [x] 12.4 编写 FAQ 功能测试
+    - **Property 11: FAQ 匹配与回复**
+    - **Property 12: FAQ 与意图分类同步**
+    - **Validates: Requirements 10.3, 10.4, 10.7**
+
+- [x] 13. 更新配置文件示例
+  - 在 config.example.yaml 添加 FAQ 配置示例
+  - 更新 README.md 说明 FAQ 功能
+  - _Requirements: 10.1_
+
+- [x] 14. FAQ 功能 Checkpoint
+  - 确保所有测试通过，如有问题请告知
+
 ## Notes
 
 - 所有任务（包括测试）都是必做项

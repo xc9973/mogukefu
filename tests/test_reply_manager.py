@@ -217,3 +217,101 @@ class TestProperty9KeywordPriorityOverAI:
         reply = manager.get_reply(result)
         assert reply == "关键词教程回复"
         assert reply != "意图教程回复"
+
+
+# ============================================================================
+# Property 11: FAQ 匹配与回复
+# Feature: telegram-intent-bot, Property 11: FAQ 匹配与回复
+# Validates: Requirements 10.3, 10.4
+# ============================================================================
+
+class TestProperty11FAQMatchAndReply:
+    """Property 11: FAQ 匹配与回复
+
+    *For any* 分类结果为 FAQ 且 faq_id 有效的情况，Reply_Manager 应返回该 FAQ 的预设答案；
+    如果 faq_id 无效，应回退到 IGNORE 处理。
+    """
+
+    @given(
+        faq_id=non_empty_string,
+        faq_answer=non_empty_string,
+    )
+    @settings(max_examples=100)
+    def test_valid_faq_id_returns_faq_answer(self, faq_id: str, faq_answer: str):
+        """有效的 FAQ ID 应返回对应的预设答案"""
+        config = make_valid_config()
+        config["faq"] = [
+            {"faq_id": faq_id, "question": "测试问题", "answer": faq_answer}
+        ]
+        store = create_config_store(config)
+        manager = ReplyManager(store)
+
+        # 创建 FAQ 意图的分类结果
+        result = ClassifyResult(intent="FAQ", faq_id=faq_id)
+
+        # 验证返回 FAQ 答案
+        reply = manager.get_reply(result)
+        assert reply == faq_answer
+
+    @given(invalid_faq_id=non_empty_string)
+    @settings(max_examples=100)
+    def test_invalid_faq_id_returns_none(self, invalid_faq_id: str):
+        """无效的 FAQ ID 应回退到静默（返回 None）"""
+        config = make_valid_config()
+        config["faq"] = [
+            {"faq_id": "valid_faq", "question": "有效问题", "answer": "有效答案"}
+        ]
+        store = create_config_store(config)
+        manager = ReplyManager(store)
+
+        # 确保使用的是无效的 FAQ ID
+        if invalid_faq_id == "valid_faq":
+            invalid_faq_id = "definitely_invalid_faq"
+
+        # 创建 FAQ 意图但使用无效 faq_id
+        result = ClassifyResult(intent="FAQ", faq_id=invalid_faq_id)
+
+        # 验证返回 None（回退到静默）
+        reply = manager.get_reply(result)
+        assert reply is None
+
+    def test_faq_intent_without_faq_id_returns_none(self):
+        """FAQ 意图但没有 faq_id 应返回 None"""
+        config = make_valid_config()
+        config["faq"] = [
+            {"faq_id": "test_faq", "question": "测试问题", "answer": "测试答案"}
+        ]
+        store = create_config_store(config)
+        manager = ReplyManager(store)
+
+        # FAQ 意图但 faq_id 为 None
+        result = ClassifyResult(intent="FAQ", faq_id=None)
+
+        # 验证返回 None
+        reply = manager.get_reply(result)
+        assert reply is None
+
+    def test_faq_reply_example(self):
+        """具体示例：FAQ 回复正常工作"""
+        config = make_valid_config()
+        config["faq"] = [
+            {"faq_id": "register", "question": "如何注册", "answer": "📝 注册步骤：1. 访问官网..."},
+            {"faq_id": "pricing", "question": "价格多少", "answer": "💰 基础版免费..."},
+        ]
+        store = create_config_store(config)
+        manager = ReplyManager(store)
+
+        # 测试 register FAQ
+        result1 = ClassifyResult(intent="FAQ", faq_id="register")
+        reply1 = manager.get_reply(result1)
+        assert reply1 == "📝 注册步骤：1. 访问官网..."
+
+        # 测试 pricing FAQ
+        result2 = ClassifyResult(intent="FAQ", faq_id="pricing")
+        reply2 = manager.get_reply(result2)
+        assert reply2 == "💰 基础版免费..."
+
+        # 测试无效 FAQ ID
+        result3 = ClassifyResult(intent="FAQ", faq_id="nonexistent")
+        reply3 = manager.get_reply(result3)
+        assert reply3 is None

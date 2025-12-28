@@ -50,3 +50,29 @@ keywords:
     reply: "👤 请联系 @Admin"
   - keyword: "bug"
     reply: "🛠 请描述问题并截图"
+
+# FAQ 知识库配置
+# 用于匹配用户常见问题，返回预设答案
+faq:
+  - faq_id: "register"
+    question: "如何注册账号、注册流程、怎么注册"
+    answer: |
+      📝 注册步骤：
+      1. 访问官网点击注册
+      2. 填写手机号获取验证码
+      3. 设置密码完成注册
+
+  - faq_id: "forgot_password"
+    question: "忘记密码、密码找回、重置密码"
+    answer: |
+      🔑 密码找回：
+      1. 点击登录页的「忘记密码」
+      2. 输入注册手机号
+      3. 通过短信验证重置密码
+
+  - faq_id: "pricing"
+    question: "价格、收费、多少钱、费用"
+    answer: |
+      💰 价格说明：
+      基础版免费，专业版 99 元/月
+      详情请访问官网定价页面

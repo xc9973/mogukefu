@@ -11,12 +11,14 @@
 - **Intent_Classifier**: 意图分类器，调用 LLM 判断消息意图
 - **Reply_Manager**: 回复管理器，根据意图标签匹配预设话术
 - **Config_Store**: 配置存储，管理意图标签与回复内容的映射关系
-- **Intent_Tag**: 意图标签，包括 TUTORIAL、ISSUE、SERVICE、IGNORE
+- **Intent_Tag**: 意图标签，包括 TUTORIAL、ISSUE、SERVICE、IGNORE、FAQ
 - **Preset_Reply**: 预设回复内容，与意图标签一一对应的固定话术
 - **Keyword_Matcher**: 关键词匹配器，基于预设关键词快速匹配回复
 - **AI_Reply_Switch**: AI 回复开关，控制是否启用 LLM 意图分类功能
 - **Keyword_Reply_Switch**: 关键词回复开关，控制是否启用关键词匹配功能
 - **Topic_Group**: Telegram 讨论组（Forum/Topic 模式），每个用户私聊会开启独立的话题线程
+- **FAQ_Store**: 常见问题知识库，存储问题ID、问题描述和预设答案的映射关系
+- **FAQ_ID**: 常见问题唯一标识符，用于 LLM 返回匹配结果
 
 ## Requirements
 
@@ -65,8 +67,9 @@
 
 1. THE Config_Store SHALL 支持从配置文件加载意图标签与回复内容的映射
 2. WHEN 配置文件格式错误 THEN Config_Store SHALL 返回明确的错误信息
-3. THE Config_Store SHALL 支持以下意图标签：TUTORIAL、ISSUE、SERVICE、IGNORE
+3. THE Config_Store SHALL 支持以下意图标签：TUTORIAL、ISSUE、SERVICE、IGNORE、FAQ
 4. FOR ALL 有效意图标签 THEN Config_Store SHALL 提供对应的预设回复内容
+5. THE Config_Store SHALL 支持配置 FAQ 知识库，包含 faq_id、question、answer 字段
 
 ### Requirement 5: LLM 接口适配
 
@@ -130,3 +133,17 @@
 3. WHEN 在讨论组话题中回复 THEN Bot SHALL 在对应的话题线程内发送回复
 4. THE Bot SHALL 支持同时在普通群组和讨论组模式下工作
 5. WHEN 处理讨论组消息 THEN Bot SHALL 正确识别消息所属的话题 ID
+
+### Requirement 10: FAQ 知识库
+
+**User Story:** As a 群管理员, I want 机器人支持 FAQ 知识库功能, so that 用户的常见问题可以得到准确一致的预设答案回复。
+
+#### Acceptance Criteria
+
+1. THE Config_Store SHALL 支持配置 FAQ 知识库，包含问题 ID、问题描述和预设答案
+2. WHEN LLM 判断用户消息匹配某个 FAQ THEN Intent_Classifier SHALL 返回 FAQ 意图标签和对应的 faq_id
+3. WHEN Intent_Tag 为 FAQ 且 faq_id 有效 THEN Reply_Manager SHALL 发送该 FAQ 的预设答案
+4. WHEN LLM 返回无效的 faq_id THEN Reply_Manager SHALL 回退到 IGNORE 处理
+5. THE System_Prompt SHALL 包含 FAQ 列表及其问题描述，供 LLM 判断匹配
+6. WHEN FAQ 知识库为空 THEN Bot SHALL 跳过 FAQ 匹配逻辑，仅执行意图分类
+7. THE FAQ 匹配 SHALL 与意图分类在同一次 LLM 调用中完成，不增加额外 API 调用

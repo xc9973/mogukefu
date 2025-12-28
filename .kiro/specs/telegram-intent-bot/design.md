@@ -97,14 +97,22 @@ class KeywordConfig:
     keyword: str       # 关键词
     reply: str         # 回复内容
 
+@dataclass
+class FAQConfig:
+    faq_id: str        # FAQ 唯一标识
+    question: str      # 问题描述（供 LLM 判断）
+    answer: str        # 预设答案
+
 class ConfigStore:
     def load(self, path: str) -> None: ...
     def get_bot_config(self) -> BotConfig: ...
     def get_llm_config(self) -> LLMConfig: ...
     def get_intents(self) -> list[IntentConfig]: ...
     def get_keywords(self) -> list[KeywordConfig]: ...
+    def get_faqs(self) -> list[FAQConfig]: ...
     def get_reply_by_intent(self, tag: str) -> str | None: ...
     def get_reply_by_keyword(self, keyword: str) -> str | None: ...
+    def get_reply_by_faq_id(self, faq_id: str) -> str | None: ...
 ```
 
 ### 2. KeywordMatcher - 关键词匹配器
@@ -125,13 +133,14 @@ class KeywordMatcher:
 class ClassifyResult:
     intent: str           # 意图标签
     keyword: str | None   # 识别的关键词（可选）
+    faq_id: str | None    # 匹配的 FAQ ID（可选）
 
 class LLMClient:
     def __init__(self, config: LLMConfig): ...
     
     async def classify(self, message: str, intents: list[IntentConfig], 
-                       keywords: list[str]) -> ClassifyResult:
-        """调用 LLM 进行意图分类，返回意图标签和可选关键词"""
+                       keywords: list[str], faqs: list[FAQConfig]) -> ClassifyResult:
+        """调用 LLM 进行意图分类，返回意图标签、可选关键词和可选 FAQ ID"""
         ...
 ```
 
@@ -205,6 +214,17 @@ keywords:
     reply: "👤 请联系 @Admin"
   - keyword: "bug"
     reply: "🛠 请描述问题并截图"
+
+faq:
+  - faq_id: "register"
+    question: "如何注册账号、注册流程、怎么注册"
+    answer: "📝 注册步骤：\n1. 访问官网点击注册\n2. 填写手机号获取验证码\n3. 设置密码完成注册"
+  - faq_id: "forgot_password"
+    question: "忘记密码、密码找回、重置密码"
+    answer: "🔑 密码找回：\n1. 点击登录页的「忘记密码」\n2. 输入注册手机号\n3. 通过短信验证重置密码"
+  - faq_id: "pricing"
+    question: "价格、收费、多少钱、费用"
+    answer: "💰 价格说明：\n基础版免费，专业版 99 元/月\n详情请访问官网定价页面"
 ```
 
 ### LLM 请求/响应格式
@@ -217,25 +237,37 @@ System Prompt:
 - TUTORIAL: 用户询问教程、说明书、如何使用
 - ISSUE: 用户反馈报错、Bug、无法运行
 - SERVICE: 用户寻找人工客服、群主、投诉
+- FAQ: 用户询问常见问题（见下方 FAQ 列表）
 - IGNORE: 闲聊、表情包、无关内容
 
 可用关键词：教程, 客服, bug
 
+FAQ 列表：
+- register: 如何注册账号、注册流程、怎么注册
+- forgot_password: 忘记密码、密码找回、重置密码
+- pricing: 价格、收费、多少钱、费用
+
 规则：
 1. 只输出 JSON，不要任何解释
 2. 如果消息明确匹配某个关键词的语义，在 keyword 字段返回该关键词
-3. 否则只返回 intent 字段
+3. 如果消息匹配某个 FAQ，返回 intent 为 "FAQ"，并在 faq_id 字段返回对应 ID
+4. FAQ 优先级高于普通意图标签
+5. 否则只返回 intent 字段
 
-输出格式：{"intent": "TAG", "keyword": "关键词或null"}
+输出格式：{"intent": "TAG", "keyword": "关键词或null", "faq_id": "FAQ_ID或null"}
 ```
 
 Response:
 ```json
-{"intent": "TUTORIAL", "keyword": null}
+{"intent": "TUTORIAL", "keyword": null, "faq_id": null}
 ```
 或
 ```json
-{"intent": "TUTORIAL", "keyword": "教程"}
+{"intent": "FAQ", "keyword": null, "faq_id": "register"}
+```
+或
+```json
+{"intent": "TUTORIAL", "keyword": "教程", "faq_id": null}
 ```
 
 
@@ -258,7 +290,7 @@ Response:
 
 ### Property 3: 意图标签有效性
 
-*For any* 分类结果，返回的意图标签必须是 TUTORIAL、ISSUE、SERVICE、IGNORE 之一。
+*For any* 分类结果，返回的意图标签必须是 TUTORIAL、ISSUE、SERVICE、IGNORE、FAQ 之一。
 
 **Validates: Requirements 2.5**
 
@@ -306,6 +338,18 @@ Response:
 - 当两个开关都关闭时，不应产生任何回复
 
 **Validates: Requirements 8.3, 8.4, 8.5**
+
+### Property 11: FAQ 匹配与回复
+
+*For any* 分类结果为 FAQ 且 faq_id 有效的情况，Reply_Manager 应返回该 FAQ 的预设答案；如果 faq_id 无效，应回退到 IGNORE 处理。
+
+**Validates: Requirements 10.3, 10.4**
+
+### Property 12: FAQ 与意图分类同步
+
+*For any* LLM 调用，FAQ 匹配和意图分类应在同一次请求中完成，不增加额外的 API 调用。
+
+**Validates: Requirements 10.7**
 
 ## Error Handling
 
