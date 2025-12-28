@@ -14,6 +14,7 @@ RUN pip install --no-cache-dir hatchling
 
 # 复制项目文件
 COPY pyproject.toml .
+COPY README.md .
 COPY src/ src/
 
 # 构建 wheel 包
