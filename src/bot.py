@@ -87,9 +87,15 @@ class TelegramBot:
         # 使用 filters.TEXT 过滤文本消息
         # 使用 filters.ChatType.GROUPS 和 filters.ChatType.SUPERGROUP 处理群组消息
         # 讨论组（Forum）属于 SUPERGROUP 类型
+        # 添加 filters.FORUM 支持讨论组话题消息
         message_filter = filters.TEXT & ~filters.COMMAND & (
             filters.ChatType.GROUP | filters.ChatType.SUPERGROUP
         )
+        
+        # 添加讨论组话题消息处理器
+        forum_filter = filters.TEXT & ~filters.COMMAND & filters.StatusUpdate.FORUM_TOPIC_CREATED
+        
+        logger.info("注册消息处理器: 普通群组 + 讨论组")
         
         self._application.add_handler(
             TelegramMessageHandler(message_filter, self._handle_message)
@@ -118,14 +124,22 @@ class TelegramBot:
         # message_thread_id 表示消息所属的话题 ID
         topic_id = message.message_thread_id
         
+        # 检查是否是讨论组（Forum）
+        is_forum = message.chat.is_forum if message.chat else False
+        
         # 记录日志
-        if topic_id:
-            logger.debug(
+        if is_forum:
+            logger.info(
                 f"收到讨论组消息: chat_id={chat_id}, topic_id={topic_id}, "
                 f"text={text[:50]}..."
             )
+        elif topic_id:
+            logger.info(
+                f"收到话题消息: chat_id={chat_id}, topic_id={topic_id}, "
+                f"text={text[:50]}..."
+            )
         else:
-            logger.debug(f"收到群组消息: chat_id={chat_id}, text={text[:50]}...")
+            logger.info(f"收到群组消息: chat_id={chat_id}, text={text[:50]}...")
         
         # 处理消息
         if self._message_handler is None:
