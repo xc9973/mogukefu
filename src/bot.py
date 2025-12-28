@@ -97,6 +97,16 @@ class TelegramBot:
             TelegramMessageHandler(message_filter, self._handle_message)
         )
         
+        # 添加调试处理器：捕获所有更新，用于排查问题
+        async def debug_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            logger.info(f"[DEBUG] 收到更新: {update}")
+        
+        # 捕获所有文本消息（无过滤）
+        self._application.add_handler(
+            TelegramMessageHandler(filters.ALL, debug_handler),
+            group=1  # 放在不同的 group，不影响主处理器
+        )
+        
         logger.info("Bot 组件初始化完成")
 
     async def _handle_message(
