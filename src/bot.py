@@ -84,18 +84,14 @@ class TelegramBot:
         )
         
         # 注册消息处理器
-        # 使用 filters.TEXT 过滤文本消息
-        # 使用 filters.ChatType.GROUPS 和 filters.ChatType.SUPERGROUP 处理群组消息
-        # 讨论组（Forum）属于 SUPERGROUP 类型
-        # 添加 filters.FORUM 支持讨论组话题消息
+        # 支持：普通群组、超级群组（Forum）、私聊（包括 Bot 私聊讨论组）
         message_filter = filters.TEXT & ~filters.COMMAND & (
-            filters.ChatType.GROUP | filters.ChatType.SUPERGROUP
+            filters.ChatType.GROUP | 
+            filters.ChatType.SUPERGROUP | 
+            filters.ChatType.PRIVATE
         )
         
-        # 添加讨论组话题消息处理器
-        forum_filter = filters.TEXT & ~filters.COMMAND & filters.StatusUpdate.FORUM_TOPIC_CREATED
-        
-        logger.info("注册消息处理器: 普通群组 + 讨论组")
+        logger.info("注册消息处理器: 群组 + 讨论组 + 私聊")
         
         self._application.add_handler(
             TelegramMessageHandler(message_filter, self._handle_message)
